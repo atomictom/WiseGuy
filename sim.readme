@@ -1,0 +1,25 @@
+Pre-Reqs
+========
+
+- Python 2.7 and Pygame 1.9
+
+Getting Pygame
+==============
+
+Pygame can be downloaded on ubuntu with the package 'python-pygame'. Otherwise it can be installed from pip, or manually from the website: http://www.pygame.org/download.shtml
+
+To Run
+======
+
+$ python sim.py
+
+	- or -
+
+$ ./sim.py
+
+Explanation
+===========
+
+Currently, the simulation creates a 10x10 grid of tiles, where green is normal, yellow is a hazard, blue is the goal, and black is a wall. It randomly populates this grid with enemies which are the red dots. Finally, the blue dot is the player. Pressing any key will exit the simulation.
+
+This is a rough draft to get the architecture of the simulation down. Later work includes using images rather than drawing primitives, smarter map generation, working enemies (i.e. they move), smarter enemy spawning (i.e. they don't spawn in walls), movement and collision detection, sockets to connect to the ANN, sensors to feed data to the ANN, and a way to manipulate the environment for testing.
