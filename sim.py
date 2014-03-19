@@ -54,14 +54,20 @@ class Color(pygame.Color):
 
 class GameObject(object):
 
-	def __init__(self, position, dimension=(0, 0)):
+	def __init__(self, position=(0, 0), dimension=(0, 0)):
 		self._rect = pygame.Rect(position, dimension)
+		self.objects = []
+
+	def add_objects(self, objs):
+		self.objects.extend(objs)
 
 	def update(self):
-		pass
+		for obj in self.objects:
+			obj.update()
 
 	def draw(self, surface):
-		pass
+		for obj in self.objects:
+			obj.draw(surface)
 
 	def notify(self, *args, **kwargs):
 		print args
