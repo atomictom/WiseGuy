@@ -81,25 +81,6 @@ class GameObject(object):
 	def rect(self, value):
 		self._rect = value
 
-class Tile(GameObject):
-
-	types = ['normal', 'trap', 'wall']
-
-	def __init__(self, position, dimension, tile_type):
-		super(Tile, self).__init__(position, dimension)
-		self.tile_type = tile_type
-
-	def draw(self, surface):
-		type_map = {
-			'normal': Color.green,
-			'end': Color.blue,
-			'trap': Color.yellow,
-			'wall': Color.black
-		}
-
-		tile_color = type_map[self.tile_type]
-		surface.subsurface(self.rect).fill(tile_color)
-
 class Enemy(GameObject):
 
 	def __init__(self, game_map, position, radius=10):
@@ -111,7 +92,6 @@ class Enemy(GameObject):
 		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
 
 	def update(self):
-	# 	if not self.rect.collidelist(self.game_map.invalid_tiles):
 		self.rect.centerx += 1
 
 class Player(GameObject):
@@ -127,49 +107,14 @@ class Player(GameObject):
 	def notify(self, test):
 		print test
 
-class Map(GameObject):
-
-	def __init__(self, width, height, tiles_x=16, tiles_y=12):
-		self.width = width
-		self.height = height
-		# tiles_x and tiles_y are the number of tiles in the x and y directions
-		self.tiles_x = tiles_x
-		self.tiles_y = tiles_y
-		self.tile_width = self.width / self.tiles_x
-		self.tile_height = self.height / self.tiles_y
-
-		self.create_tiles()
-		self.create_enemies()
-		self.player = Player((20, 20))
-		self.player.notify('hi')
-
-	# TODO: Break this up into smaller functions.
-	# TODO: Break up creating a tile from giving it a type?
-	def create_tiles(self):
-		self.tiles = []
-		tile_dimension = (self.tile_width, self.tile_height)
 
 		# Create the tiles and assign random types
 		for i in xrange(self.tiles_x):
 			self.tiles.append([])
 
-			for j in xrange(self.tiles_y):
-				num_types = len(Tile.types)
-				tile_choice = random.randint(0, num_types - 1)
-				tile_type = Tile.types[tile_choice]
 
-				tile_position = (i * tile_dimension[0], j * tile_dimension[1])
 
-				new_tile = Tile(tile_position, tile_dimension, tile_type)
-				self.tiles[i].append(new_tile)
 
-		# Make a clear path to the end, and create the end
-		path = [0, 0]
-		end = [self.tiles_x - 1, self.tiles_y - 1]
-		while path != end:
-			self.tiles[path[0]][path[1]].tile_type = 'normal'
-
-			movement_dir = random.randint(0, 1)
 
 			if path[movement_dir] == end[movement_dir]:
 				movement_dir = 1 - movement_dir
@@ -177,52 +122,25 @@ class Map(GameObject):
 			path[movement_dir] += 1
 
 
-		self.tiles[end[0]][end[1]].tile_type = 'end'
+	def create_walls(self):
+		walls = []
+		for pos, dim in WALLS:
+			new_wall = Wall(pos, dim)
+			walls.append(new_wall)
 
-		# Find a list of all valid tiles to spawn in
-		all_tiles = []
-		for column in self.tiles:
-			all_tiles.extend([tile for tile in column])
-		self.valid_tiles = [tile for tile in all_tiles if tile.tile_type == 'normal']
-		self.invalid_tiles = list(set(all_tiles) - set(self.valid_tiles))
+		return walls
 
 	def create_enemies(self):
-		self.enemies = []
+		enemies = []
+		for pos in ENEMIES:
+			new_enemy = Enemy(self, pos)
+			enemies.append(new_enemy)
 
-		for i in xrange(3):
-			# Keep enemies from being created in invalid locations
-			tile_location = random.choice(self.valid_tiles)
-
-			enemy_pos = tile_location.rect.center
-
-			new_enemy = Enemy(self, enemy_pos)
-			self.enemies.append(new_enemy)
-
+		return enemies
 
 	def draw(self, surface):
-		tile_width = surface.get_width() / self.tiles_x
-		tile_height = surface.get_height() / self.tiles_y
-		tile_size = (tile_width, tile_height)
-
-		for column in self.tiles:
-			for tile in column:
-				tile.draw(surface)
-
-		for enemy in self.enemies:
-			enemy.draw(surface)
-
-		self.player.draw(surface)
-
-	def update(self):
-		for column in self.tiles:
-			for tile in column:
-				tile.update()
-
-		for enemy in self.enemies:
-			enemy.update()
-
-		self.player.update()
-
+		surface.fill(Color.white)
+		super(Map, self).draw(surface)
 
 class Simulation(object):
 
