@@ -33,6 +33,17 @@ from pygame.locals import *
 # 	* [ ] Collision detection on walls + enemies + player
 # 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
 
+# Walls and enemy locations are hardcoded here for predictability
+WALLS = [
+	[(50, 30), (25, 100)],
+	[(120, 250), (200, 50)],
+]
+
+ENEMIES = [
+	(10, 20),
+	(80, 400),
+]
+
 class Color(pygame.Color):
 	white = pygame.Color(255, 255, 255)
 	red = pygame.color.Color(255, 0, 0)
