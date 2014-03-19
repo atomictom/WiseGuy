@@ -8,16 +8,30 @@ import random
 
 from pygame.locals import *
 
+# Notes:
+# 	Currently there are no hazards, enemies are static, and walls and enemies are
+# 	statically placed.
+
 # TODO:
-# 	* [ ] Rewrite the draw methods to use actual images
-# 	* [ ] Consider using Sprite class as a base for the GameObject class
-# 	* [ ] Enemies need to move (finish the 'update' function)
-# 	* [ ] Walls and hazards should be placed in smarter locations
-# 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
+# High Priority:
+# 	* [X] Replace tiles with walls (rectangles that can be anywhere and are impassable)
+# 	* [X] Manually place walls and hazards
+# Low Priority:
+# 	* [ ] Rewrite the draw methods to use actual images (for enemies, player, hazards, and goal)
+
+# For Matt:
+# 	* [ ] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", for now
+# 	* [ ] Enemies need to move (write the 'update' function on the Enemy class)
+# 	* [ ] Add controls to modify the environment while the ANN is running (add/rm walls? add/rm enemies?)
+
+# For Diego:
 # 	* [ ] Add socket code to connect to the ANN
-# 	* [ ] Add controls for the ANN to modify the Player object
-# 	* [ ] Clean it up a bit
-# 	* [ ] Add controls to modify the environment while the ANN is running
+
+# For Thomas:
+# 	* [ ] Consider using Sprite class as a base for the GameObject class
+# 	* [ ] Consider alternative to add_objects() and super method draw/update
+# 	* [ ] Collision detection on walls + enemies + player
+# 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
 
 class Color(pygame.Color):
 	white = pygame.Color(255, 255, 255)
