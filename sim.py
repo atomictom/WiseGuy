@@ -107,20 +107,40 @@ class Player(GameObject):
 	def notify(self, test):
 		print test
 
+class Wall(GameObject):
+	""" Wall represents an impassable object that the player or enemies must navigate around
 
-		# Create the tiles and assign random types
-		for i in xrange(self.tiles_x):
-			self.tiles.append([])
+		Parameters:
+			position -> the upper left corner of the wall's rectangle as a tuple
+			dimension -> the width and height of the rectangle as a tuple
+	"""
 
+	def __init__(self, position, dimension):
+		super(Wall, self).__init__(position, dimension)
 
+	def draw(self, surface):
+		wall_surface = surface.subsurface(self.rect)
+		wall_surface.fill(Color.black)
 
+class Map(GameObject):
 
+	def __init__(self, width, height):
+		super(Map, self).__init__(dimension=(width, height))
 
-			if path[movement_dir] == end[movement_dir]:
-				movement_dir = 1 - movement_dir
+		self.width = width
+		self.height = height
 
-			path[movement_dir] += 1
+		# Create the walls, enemies, and player
+		self.walls = self.create_walls()
+		self.enemies = self.create_enemies()
+		self.player = Player((20, 20))
 
+		# Add all created objects using add_objects()
+		objects = []
+		objects.extend(self.walls)
+		objects.extend(self.enemies)
+		objects.append(self.player)
+		self.add_objects(objects)
 
 	def create_walls(self):
 		walls = []
@@ -206,4 +226,5 @@ def main():
 	window = pygame.display.get_surface()
 	sim.mainloop(window)
 
-main()
+if __name__ == "__main__":
+	main()
