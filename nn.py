@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Neural Network
 # -- nn.py
 #
