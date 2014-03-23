@@ -19,17 +19,18 @@ from pygame.locals import *
 # Low Priority:
 # 	* [ ] Rewrite the draw methods to use actual images (for enemies, player, hazards, and goal)
 
-# For Matt:
+# For Matt and Diego:
 # 	* [ ] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
 # 	* [ ] Implement the update() method of the Player class to act on command received from notify()
 # 	* [ ] Enemies need to move (write the 'update' function on the Enemy class)
 # 	* [ ] Add controls to modify the environment/sim while the ANN is running (add/rm walls? add/rm enemies?)
 
 # For Diego:
-# 	* [ ] Add socket code to connect to the ANN
+# 	* [X] Add socket code to connect to the ANN
 
 # For Thomas:
 # 	* [ ] Consider using Sprite class as a base for the GameObject class
+# 	* [ ] Integrate socket code
 # 	* [ ] Consider alternative to add_objects() and super method draw/update
 # 	* [ ] Collision detection on walls + enemies + player
 # 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
