@@ -47,8 +47,6 @@ ENEMIES = [
 	(90, 100),
 ]
 
-COMMANDS = {'UP':1, 'DN':2, 'LF':3, 'RG':4}
-
 class Color(pygame.Color):
 	white = pygame.Color(255, 255, 255)
 	red = pygame.color.Color(255, 0, 0)
@@ -68,14 +66,7 @@ class GameObject(object):
 
 	def update(self):
 		for obj in self.objects:
-			#obj.update()
-
-			#TODO: need to make sure notify takes in the commands from the ANN when sockets are integrated.
-
-			#notify gets called for all objects now, this way it can be updated
-			#from the ANN. In this example, instead of "goRight", you can put the input
-			#from the ANN
-			obj.notify("goRight")
+			obj.update()
 
 	def draw(self, surface):
 		for obj in self.objects:
@@ -109,8 +100,8 @@ class Enemy(GameObject):
 	#Another option would be to have static threads instead of moving enemies.
 	def update(self):
 		speed = 5
-		screenWidth = 832
-		self.rect.centerx = (self.rect.centerx + speed) % screenWidth
+		screen_width = 832
+		self.rect.centerx = (self.rect.centerx + speed) % screen_width
 
 	#For enemies, it should just execute a predetermined action, not care about the commands.
 	def notify(self, command):
@@ -122,38 +113,37 @@ class Player(GameObject):
 	def __init__(self, position, radius=10):
 		super(Player, self).__init__(position)
 		self.radius = radius
+		self.turn_right = False
+		self.turn_left = False
+		self.move_forward = False
 
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.blue, self.rect.topleft, self.radius)
 
 	# Use this for moving the player
 	def notify(self, command):
-		if command == 'goLeft':
-			self.update(COMMANDS['LF'])
-		elif command == 'goRight':
-			self.update(COMMANDS['RG'])
-		elif command == 'goUp':
-			self.update(COMMANDS['UP'])
-		elif command == 'goDown':
-			self.update(COMMANDS['DN'])
+		if command == 'turnLeft':
+			self.turn_left = True
+		elif command == 'turnRight':
+			self.turn_right = True
+		elif command == 'moveForward':
+			self.move_forward = True
 		else:
 			print "Invalid command"
 
-	def update(self, command):
-		if command == COMMANDS['LF']:
-			self.rect.centerx -= 1
+	def update(self):
+		if self.turn_left == True:
+			self.rect.centerx -= 1 #REPLACE BY CODE TO TURN LEFT
 			print "go left"
-		elif command == COMMANDS['RG']:
-			self.rect.centerx += 1
+			self.turn_left = False
+		if self.turn_right == True:
+			self.rect.centerx += 1 #REPLACE BY CODE TO TURN RIGHT
 			print "go right"
-		elif command == COMMANDS['UP']:
-			self.rect.centery -= 1
+			self.turn_right = False
+		if self.move_forward == True:
+			self.rect.centery -= 1 #REPLACE BY CODE TO MOVE FORWARD
 			print "go up"
-		elif command == COMMANDS['DN']:
-			self.rect.centery += 1
-			print "go down"
-		else:
-			print "Invalid command"
+			self.move_forward = False
 
 
 class Wall(GameObject):
