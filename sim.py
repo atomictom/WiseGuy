@@ -20,7 +20,7 @@ from pygame.locals import *
 # 	* [ ] Rewrite the draw methods to use actual images (for enemies, player, hazards, and goal)
 
 # For Matt and Diego:
-# 	* [ ] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
+# 	* [X] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
 # 	* [ ] Implement the update() method of the Player class to act on command received from notify()
 # 	* [ ] Enemies need to move (write the 'update' function on the Enemy class)
 # 	* [ ] Add controls to modify the environment/sim while the ANN is running (add/rm walls? add/rm enemies?)
@@ -108,6 +108,17 @@ class Player(GameObject):
 	# Use this for moving the player
 	def notify(self, test):
 		print test
+		if test == "turn left":
+			self.update(0)
+		else if test == "turn right":
+			self.update(1)
+		else if test == "forward":
+			self.update(2)
+		else if test == "stop":
+			self.update(3)
+
+	def update(self, direction):
+
 
 class Wall(GameObject):
 	""" Wall represents an impassable object that the player or enemies must navigate around
