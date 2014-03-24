@@ -20,9 +20,9 @@ from pygame.locals import *
 # 	* [ ] Rewrite the draw methods to use actual images (for enemies, player, hazards, and goal)
 
 # For Matt and Diego:
-# 	* [ ] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
-# 	* [ ] Implement the update() method of the Player class to act on command received from notify()
-# 	* [ ] Enemies need to move (write the 'update' function on the Enemy class)
+# 	* [X] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
+# 	* [X] Implement the update() method of the Player class to act on command received from notify()
+# 	* [X] Enemies need to move (write the 'update' function on the Enemy class)
 # 	* [ ] Add controls to modify the environment/sim while the ANN is running (add/rm walls? add/rm enemies?)
 
 # For Diego:
@@ -42,9 +42,12 @@ WALLS = [
 ]
 
 ENEMIES = [
-	(10, 20),
+	(10, 600),
 	(80, 400),
+	(90, 100),
 ]
+
+COMMANDS = {'UP':1, 'DN':2, 'LF':3, 'RG':4}
 
 class Color(pygame.Color):
 	white = pygame.Color(255, 255, 255)
@@ -65,7 +68,14 @@ class GameObject(object):
 
 	def update(self):
 		for obj in self.objects:
-			obj.update()
+			#obj.update()
+
+			#TODO: need to make sure notify takes in the commands from the ANN when sockets are integrated.
+
+			#notify gets called for all objects now, this way it can be updated
+			#from the ANN. In this example, instead of "goRight", you can put the input
+			#from the ANN
+			obj.notify("goRight")
 
 	def draw(self, surface):
 		for obj in self.objects:
@@ -93,8 +103,19 @@ class Enemy(GameObject):
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
 
+	#Enemies will move using this function, they should move in a predetermined way
+	#for now, they just move accross the screen the frogger way.
+	#This is good because it gives the enemies a level of predictability.
+	#Another option would be to have static threads instead of moving enemies.
 	def update(self):
-		self.rect.centerx += 1
+		speed = 5
+		screenWidth = 832
+		self.rect.centerx = (self.rect.centerx + speed) % screenWidth
+
+	#For enemies, it should just execute a predetermined action, not care about the commands.
+	def notify(self, command):
+		self.update()
+
 
 class Player(GameObject):
 
@@ -106,8 +127,34 @@ class Player(GameObject):
 		pygame.draw.circle(surface, Color.blue, self.rect.topleft, self.radius)
 
 	# Use this for moving the player
-	def notify(self, test):
-		print test
+	def notify(self, command):
+		if command == 'goLeft':
+			self.update(COMMANDS['LF'])
+		elif command == 'goRight':
+			self.update(COMMANDS['RG'])
+		elif command == 'goUp':
+			self.update(COMMANDS['UP'])
+		elif command == 'goDown':
+			self.update(COMMANDS['DN'])
+		else:
+			print "Invalid command"
+
+	def update(self, command):
+		if command == COMMANDS['LF']:
+			self.rect.centerx -= 1
+			print "go left"
+		elif command == COMMANDS['RG']:
+			self.rect.centerx += 1
+			print "go right"
+		elif command == COMMANDS['UP']:
+			self.rect.centery -= 1
+			print "go up"
+		elif command == COMMANDS['DN']:
+			self.rect.centery += 1
+			print "go down"
+		else:
+			print "Invalid command"
+
 
 class Wall(GameObject):
 	""" Wall represents an impassable object that the player or enemies must navigate around
