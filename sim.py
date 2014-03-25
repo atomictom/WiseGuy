@@ -90,6 +90,8 @@ class GameObject(object):
 
 class Enemy(GameObject):
 
+	speed = 1.5
+
 	def __init__(self, parent, position, radius=10):
 		super(Enemy, self).__init__(parent, position, (2 * radius, 2 * radius))
 		self.radius = radius
@@ -98,25 +100,16 @@ class Enemy(GameObject):
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
 
-	#Enemies will move using this function, they should move in a predetermined way
-	#for now, they just move accross the screen the frogger way.
-	#This is good because it gives the enemies a level of predictability.
-	#Another option would be to have static threads instead of moving enemies.
 	def update(self):
-		speed = 5
-		screen_width = 832
-		self.rect.centerx = (self.rect.centerx + speed) % screen_width
-
-	#For enemies, it should just execute a predetermined action, not care about the commands.
-	def notify(self, command):
-		self.update()
-
+		screen_width = self.parent.rect.width
+		self.rect.centerx = (self.rect.centerx + Enemy.speed) % screen_width
 
 class Player(GameObject):
 
 	def __init__(self, parent, position, radius=10):
 		super(Player, self).__init__(parent, position)
 		self.radius = radius
+
 		self.turn_right = False
 		self.turn_left = False
 		self.move_forward = False
@@ -124,30 +117,33 @@ class Player(GameObject):
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.blue, self.rect.topleft, self.radius)
 
+	def update(self):
+		if self.move_forward:
+			self.rect.centery -= 1 #REPLACE BY CODE TO MOVE FORWARD
+
+		if self.turn_left:
+			self.rect.centerx -= 1 #REPLACE BY CODE TO TURN LEFT
+
+		if self.turn_right:
+			self.rect.centerx += 1 #REPLACE BY CODE TO TURN RIGHT
+
+		self.move_forward = False
+		self.turn_left = False
+		self.turn_right = False
+
 	# Use this for moving the player
 	def notify(self, command):
 		if command == 'turnLeft':
 			self.turn_left = True
+			print "turn left command received"
 		elif command == 'turnRight':
 			self.turn_right = True
+			print "turn right command received"
 		elif command == 'moveForward':
 			self.move_forward = True
+			print "go forward command received"
 		else:
-			print "Invalid command"
-
-	def update(self):
-		if self.turn_left == True:
-			self.rect.centerx -= 1 #REPLACE BY CODE TO TURN LEFT
-			print "go left"
-			self.turn_left = False
-		if self.turn_right == True:
-			self.rect.centerx += 1 #REPLACE BY CODE TO TURN RIGHT
-			print "go right"
-			self.turn_right = False
-		if self.move_forward == True:
-			self.rect.centery -= 1 #REPLACE BY CODE TO MOVE FORWARD
-			print "go up"
-			self.move_forward = False
+			print "Invalid command (this shouldn't happen!)"
 
 
 class Wall(GameObject):
