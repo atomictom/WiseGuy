@@ -2,6 +2,7 @@
 
 # Simulation for Neural Network
 
+import math
 import pygame
 import pygame.draw
 import random
@@ -46,6 +47,8 @@ ENEMIES = [
 	(80, 400),
 	(500, 100),
 ]
+
+PLAYER_START = (350, 350)
 
 class Color(pygame.Color):
 	white = pygame.Color(255, 255, 255)
@@ -96,13 +99,14 @@ class Enemy(GameObject):
 		super(Enemy, self).__init__(parent, position, (2 * radius, 2 * radius))
 		self.radius = radius
 		self.game_map = parent
+		self.speed = Enemy.speed
 
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
 
 	def update(self):
 		screen_width = self.parent.rect.width
-		self.rect.centerx = (self.rect.centerx + Enemy.speed) % screen_width
+		self.rect.centerx = (self.rect.centerx + self.speed) % screen_width
 
 class StaticEnemy(Enemy):
 
@@ -112,36 +116,58 @@ class StaticEnemy(Enemy):
 class Player(GameObject):
 
 	def __init__(self, parent, position, radius=10):
-		super(Player, self).__init__(parent, position, dimension=(radius, radius))
+		super(Player, self).__init__(parent, position, dimension=(2 * radius, 2 * radius))
 		self.radius = radius
 
 		self.turn_right = False
 		self.turn_left = False
 		self.move_forward = False
 
+		self.x, self.y = position
+		self.speed = 2
+		self.rotation_speed = .06
+		# Start facing to the top of the screen. 0 degrees points to the right
+		self.theta = math.pi
+
 	def draw(self, surface):
-		pygame.draw.circle(surface, Color.blue, self.rect.topleft, self.radius)
+		# When this is changed to use an image instead of a circle, rotate the image
+		pygame.draw.circle(surface, Color.blue, self.rect.center, self.radius)
+		pygame.draw.rect(surface, Color.yellow, self.rect)
 
 	def update(self):
-		# Save the original position in case we collide and need to revert
-		original_position = self.rect.center
 
+		# Might need to track x and y seperately from self.rect since it might
+		# truncate values to integers, in which case two movements of 1.5 will
+		# only go 2 units, not 3.
 		if self.move_forward:
-			print 'Forward'
-			self.rect.y += 1 #REPLACE BY CODE TO MOVE FORWARD
+			self.go_forward()
 
 		if self.turn_left:
 			print 'Left'
-			self.rect.x -= 1 #REPLACE BY CODE TO TURN LEFT
+			self.theta -= self.rotation_speed % (2 * math.pi)
 
 		if self.turn_right:
 			print 'Right'
-			self.rect.x += 1 #REPLACE BY CODE TO TURN RIGHT
+			self.theta += self.rotation_speed % (2 * math.pi)
 
-		# Undo the changes if there was a collision
+	def go_forward(self):
+		print 'Forward'
+		# Save the original position in case we collide and need to revert
+		original_position = (self.x, self.y)
+
+		# self.x and self.y are floats, self.rect.x and self.rect.y are ints
+		# so we update them separately to avoid loss of precision
+		self.x += self.speed * math.cos(self.theta)
+		self.y += self.speed * math.sin(self.theta)
+
+		# If there is a collision, move back to the original position (disallow it)
 		if self.rect.collidelist(self.parent.walls) != -1:
 			print "Collision!"
-			self.rect.center = original_position
+			self.x, self.y = original_position
+
+		# Apply the position updates to the Player's rect
+		self.rect.x = self.x
+		self.rect.y = self.y
 
 	# Use this for moving the player
 	def notify(self, command, state=True):
@@ -184,7 +210,7 @@ class Map(GameObject):
 		# Create the walls, enemies, and player
 		self.walls = self.create_walls()
 		self.enemies = self.create_enemies()
-		self.player = Player(self, (20, 20))
+		self.player = Player(self, PLAYER_START)
 
 	def create_walls(self):
 		walls = []
