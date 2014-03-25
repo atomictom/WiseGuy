@@ -21,9 +21,9 @@ from pygame.locals import *
 # 	* [ ] Consider using Sprite class as a base for the GameObject class
 
 # For Matt and Diego:
-# 	* [ ] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
-# 	* [ ] Implement the update() method of the Player class to act on command received from notify()
-# 	* [ ] Enemies need to move (write the 'update' function on the Enemy class)
+# 	* [X] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
+# 	* [X] Implement the update() method of the Player class to act on command received from notify()
+# 	* [X] Enemies need to move (write the 'update' function on the Enemy class)
 # 	* [ ] Add controls to modify the environment/sim while the ANN is running (add/rm walls? add/rm enemies?)
 # 	* [ ] Integrate socket code
 
@@ -42,8 +42,9 @@ WALLS = [
 ]
 
 ENEMIES = [
-	(10, 20),
+	(10, 600),
 	(80, 400),
+	(90, 100),
 ]
 
 class Color(pygame.Color):
@@ -97,21 +98,57 @@ class Enemy(GameObject):
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
 
+	#Enemies will move using this function, they should move in a predetermined way
+	#for now, they just move accross the screen the frogger way.
+	#This is good because it gives the enemies a level of predictability.
+	#Another option would be to have static threads instead of moving enemies.
 	def update(self):
-		self.rect.centerx += 1
+		speed = 5
+		screen_width = 832
+		self.rect.centerx = (self.rect.centerx + speed) % screen_width
+
+	#For enemies, it should just execute a predetermined action, not care about the commands.
+	def notify(self, command):
+		self.update()
+
 
 class Player(GameObject):
 
 	def __init__(self, parent, position, radius=10):
 		super(Player, self).__init__(parent, position)
 		self.radius = radius
+		self.turn_right = False
+		self.turn_left = False
+		self.move_forward = False
 
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.blue, self.rect.topleft, self.radius)
 
 	# Use this for moving the player
-	def notify(self, test):
-		print test
+	def notify(self, command):
+		if command == 'turnLeft':
+			self.turn_left = True
+		elif command == 'turnRight':
+			self.turn_right = True
+		elif command == 'moveForward':
+			self.move_forward = True
+		else:
+			print "Invalid command"
+
+	def update(self):
+		if self.turn_left == True:
+			self.rect.centerx -= 1 #REPLACE BY CODE TO TURN LEFT
+			print "go left"
+			self.turn_left = False
+		if self.turn_right == True:
+			self.rect.centerx += 1 #REPLACE BY CODE TO TURN RIGHT
+			print "go right"
+			self.turn_right = False
+		if self.move_forward == True:
+			self.rect.centery -= 1 #REPLACE BY CODE TO MOVE FORWARD
+			print "go up"
+			self.move_forward = False
+
 
 class Wall(GameObject):
 	""" Wall represents an impassable object that the player or enemies must navigate around
