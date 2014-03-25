@@ -230,16 +230,11 @@ class Simulation(object):
 		# create the server and the client for communication with ANN.
 		# server for receiving commands from the ANN
 		context = zmq.Context()
-		self.socket = context.socket(zmq.REP)
+		self.socket = context.socket(zmq.REQ)
 		self.socket.bind('tcp://127.0.0.1:1234')
+		self.socket.connect('tcp://127.0.0.1:1235')
 
-		# client for outputing the input values to the ANN
-		context = zmq.Context()
-		self.socket_output = context.socket(zmq.REQ)
-		self.socket_output.connect('tcp://127.0.0.1:1235')
-
-		threading.Thread(target=receiving, args=[self]).start()
-		#threading.Timer(0.0, receiving, [self]).start()
+		threading.Thread(target=connection, args=[self]).start()
 
 	def quit(self):
 		self.running = false
@@ -277,17 +272,9 @@ class Simulation(object):
 			self.update()
 			self.draw(window)
 
-			#send output to ANN.
-			output_list = self.game_map.player.get_info()
-			output_string = pickle.dumps(output_list)
-			self.socket_output.send(output_string)
-			msg = self.socket_output.recv()
-			print msg
-
 			pygame.display.flip()
 			pygame.event.pump()
 
-		self.socket_output.close()
 		self.socket.close()
 
 def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
@@ -298,13 +285,18 @@ def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
 	surface.blit(msgsurface, rect)
 	return rect
 
-def receiving(simulation_object):
+def connection(simulation_object):
 	while True:
+
+		#send output to ANN.
+		output_list = simulation_object.game_map.player.get_info()
+		output_string = pickle.dumps(output_list)
+		simulation_object.socket.send(output_string)
+
+		#receive reply from ANN
 		msg = simulation_object.socket.recv()
 		list_message = pickle.loads(msg)
-
 		if list_message:
-			simulation_object.socket.send('ACK')
 
 			#position 1 will be turn right
 			turn_right = list_message[0]
