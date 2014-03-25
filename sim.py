@@ -42,9 +42,9 @@ WALLS = [
 ]
 
 ENEMIES = [
-	(10, 600),
+	(200, 600),
 	(80, 400),
-	(90, 100),
+	(500, 100),
 ]
 
 class Color(pygame.Color):
@@ -103,6 +103,11 @@ class Enemy(GameObject):
 	def update(self):
 		screen_width = self.parent.rect.width
 		self.rect.centerx = (self.rect.centerx + Enemy.speed) % screen_width
+
+class StaticEnemy(Enemy):
+
+	def update(self):
+		pass
 
 class Player(GameObject):
 
@@ -185,7 +190,7 @@ class Map(GameObject):
 	def create_enemies(self):
 		enemies = []
 		for pos in ENEMIES:
-			new_enemy = Enemy(self, pos)
+			new_enemy = StaticEnemy(self, pos)
 			enemies.append(new_enemy)
 
 		return enemies
