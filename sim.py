@@ -31,7 +31,7 @@ from pygame.locals import *
 # 	* [X] Add socket code to connect to the ANN
 
 # For Thomas:
-# 	* [ ] Consider alternative to add_objects() and super method draw/update
+# 	* [X] Consider alternative to add_objects() and super method draw/update -- I added a 'parent' parameter and a 'register' method
 # 	* [ ] Collision detection on walls + enemies + player
 # 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
 
@@ -56,12 +56,16 @@ class Color(pygame.Color):
 
 class GameObject(object):
 
-	def __init__(self, position=(0, 0), dimension=(0, 0)):
-		self._rect = pygame.Rect(position, dimension)
+	def __init__(self, parent, position=(0, 0), dimension=(0, 0)):
+		self.parent = parent
 		self.objects = []
+		if parent:
+			parent.register(self)
 
-	def add_objects(self, objs):
-		self.objects.extend(objs)
+		self._rect = pygame.Rect(position, dimension)
+
+	def register(self, obj):
+		self.objects.append(obj)
 
 	def update(self):
 		for obj in self.objects:
@@ -85,10 +89,10 @@ class GameObject(object):
 
 class Enemy(GameObject):
 
-	def __init__(self, game_map, position, radius=10):
-		super(Enemy, self).__init__(position, (2 * radius, 2 * radius))
+	def __init__(self, parent, position, radius=10):
+		super(Enemy, self).__init__(parent, position, (2 * radius, 2 * radius))
 		self.radius = radius
-		self.game_map = game_map
+		self.game_map = parent
 
 	def draw(self, surface):
 		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
@@ -98,8 +102,8 @@ class Enemy(GameObject):
 
 class Player(GameObject):
 
-	def __init__(self, position, radius=10):
-		super(Player, self).__init__(position)
+	def __init__(self, parent, position, radius=10):
+		super(Player, self).__init__(parent, position)
 		self.radius = radius
 
 	def draw(self, surface):
@@ -117,8 +121,8 @@ class Wall(GameObject):
 			dimension -> the width and height of the rectangle as a tuple
 	"""
 
-	def __init__(self, position, dimension):
-		super(Wall, self).__init__(position, dimension)
+	def __init__(self, parent, position, dimension):
+		super(Wall, self).__init__(parent, position, dimension)
 
 	def draw(self, surface):
 		wall_surface = surface.subsurface(self.rect)
@@ -127,7 +131,7 @@ class Wall(GameObject):
 class Map(GameObject):
 
 	def __init__(self, width, height):
-		super(Map, self).__init__(dimension=(width, height))
+		super(Map, self).__init__(None, dimension=(width, height))
 
 		self.width = width
 		self.height = height
@@ -135,19 +139,12 @@ class Map(GameObject):
 		# Create the walls, enemies, and player
 		self.walls = self.create_walls()
 		self.enemies = self.create_enemies()
-		self.player = Player((20, 20))
-
-		# Add all created objects using add_objects()
-		objects = []
-		objects.extend(self.walls)
-		objects.extend(self.enemies)
-		objects.append(self.player)
-		self.add_objects(objects)
+		self.player = Player(self, (20, 20))
 
 	def create_walls(self):
 		walls = []
 		for pos, dim in WALLS:
-			new_wall = Wall(pos, dim)
+			new_wall = Wall(self, pos, dim)
 			walls.append(new_wall)
 
 		return walls
