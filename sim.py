@@ -26,14 +26,14 @@ from pygame.locals import *
 # 	* [X] Implement the update() method of the Player class to act on command received from notify()
 # 	* [X] Enemies need to move (write the 'update' function on the Enemy class)
 # 	* [ ] Add controls to modify the environment/sim while the ANN is running (add/rm walls? add/rm enemies?)
-# 	* [ ] Integrate socket code
+# 	* [X] Integrate socket code
 
 # For Diego:
 # 	* [X] Add socket code to connect to the ANN
 
 # For Thomas:
 # 	* [X] Consider alternative to add_objects() and super method draw/update -- I added a 'parent' parameter and a 'register' method
-# 	* [ ] Collision detection on walls + enemies + player
+# 	* [ ] Collision detection on walls + enemies + player -- partially done
 # 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
 
 # Walls and enemy locations are hardcoded here for predictability
@@ -248,6 +248,8 @@ class Simulation(object):
 		self.running = false
 
 	def keytoggle(self, key, state):
+		if key == K_ESCAPE:
+			self.running = False
 		if key == K_q:
 			self.running = False
 		if key == K_UP:
