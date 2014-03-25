@@ -234,7 +234,7 @@ class Simulation(object):
 		self.socket.bind('tcp://127.0.0.1:1234')
 		self.socket.connect('tcp://127.0.0.1:1235')
 
-		threading.Thread(target=connection, args=[self]).start()
+		threading.Thread(target=connection, args=[self.socket, self.game_map.player]).start()
 
 	def quit(self):
 		self.running = false
@@ -285,33 +285,33 @@ def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
 	surface.blit(msgsurface, rect)
 	return rect
 
-def connection(simulation_object):
+def connection(socket, player):
 	while True:
 
 		#send output to ANN.
-		output_list = simulation_object.game_map.player.get_info()
+		output_list = player.get_info()
 		output_string = pickle.dumps(output_list)
-		simulation_object.socket.send(output_string)
+		socket.send(output_string)
 
 		#receive reply from ANN
-		msg = simulation_object.socket.recv()
+		msg = socket.recv()
 		list_message = pickle.loads(msg)
 		if list_message:
 
 			#position 1 will be turn right
 			turn_right = list_message[0]
 			if turn_right:
-				simulation_object.game_map.player.notify('turn_right')
+				player.notify('turn_right')
 
 			#position 2 will be turn left
 			turn_left = list_message[1]
 			if turn_left:
-				simulation_object.game_map.player.notify('turn_left')
+				player.notify('turn_left')
 
 			#position 3 will be move forward
 			move_forward = list_message[2]
 			if move_forward:
-				simulation_object.game_map.player.notify('move_forward')
+				player.notify('move_forward')
 		else:
 			print "Invalid commands"
 
