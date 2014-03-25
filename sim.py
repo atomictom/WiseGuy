@@ -7,6 +7,11 @@ import pygame
 import pygame.draw
 import random
 
+import threading
+import time
+import zmq
+import pickle
+
 from pygame.locals import *
 
 # Notes:
@@ -169,6 +174,10 @@ class Player(GameObject):
 		self.rect.x = self.x
 		self.rect.y = self.y
 
+	#Function for computing the output that will go to the ANN
+	def get_info(self):
+		pass
+
 	# Use this for moving the player
 	def notify(self, command, state=True):
 		if command == 'move_forward':
@@ -244,6 +253,15 @@ class Simulation(object):
 
 		self.game_map = Map(*self.resolution)
 
+		# create the server and the client for communication with ANN.
+		# server for receiving commands from the ANN
+		context = zmq.Context()
+		self.socket = context.socket(zmq.REQ)
+		self.socket.bind('tcp://127.0.0.1:1234')
+		self.socket.connect('tcp://127.0.0.1:1235')
+
+		threading.Thread(target=connection, args=[self.socket, self.game_map.player]).start()
+
 	def quit(self):
 		self.running = false
 
@@ -283,6 +301,8 @@ class Simulation(object):
 			pygame.display.flip()
 			pygame.event.pump()
 
+		self.socket.close()
+
 def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
 	font = pygame.font.Font(None, size)
 	msgsurface = font.render(msg, False, color)
@@ -290,6 +310,37 @@ def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
 	rect.topleft = location
 	surface.blit(msgsurface, rect)
 	return rect
+
+def connection(socket, player):
+	while True:
+
+		#send output to ANN.
+		output_list = player.get_info()
+		output_string = pickle.dumps(output_list)
+		socket.send(output_string)
+
+		#receive reply from ANN
+		msg = socket.recv()
+		list_message = pickle.loads(msg)
+		if list_message:
+
+			#position 1 will be turn right
+			turn_right = list_message[0]
+			if turn_right:
+				player.notify('turn_right')
+
+			#position 2 will be turn left
+			turn_left = list_message[1]
+			if turn_left:
+				player.notify('turn_left')
+
+			#position 3 will be move forward
+			move_forward = list_message[2]
+			if move_forward:
+				player.notify('move_forward')
+		else:
+			print "Invalid commands"
+
 
 def main():
 	sim = Simulation()
