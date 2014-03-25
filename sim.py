@@ -112,7 +112,7 @@ class StaticEnemy(Enemy):
 class Player(GameObject):
 
 	def __init__(self, parent, position, radius=10):
-		super(Player, self).__init__(parent, position)
+		super(Player, self).__init__(parent, position, dimension=(radius, radius))
 		self.radius = radius
 
 		self.turn_right = False
@@ -123,30 +123,37 @@ class Player(GameObject):
 		pygame.draw.circle(surface, Color.blue, self.rect.topleft, self.radius)
 
 	def update(self):
+		# Save the original position in case we collide and need to revert
+		original_position = self.rect.center
+
 		if self.move_forward:
-			self.rect.centery -= 1 #REPLACE BY CODE TO MOVE FORWARD
+			print 'Forward'
+			self.rect.y += 1 #REPLACE BY CODE TO MOVE FORWARD
 
 		if self.turn_left:
-			self.rect.centerx -= 1 #REPLACE BY CODE TO TURN LEFT
+			print 'Left'
+			self.rect.x -= 1 #REPLACE BY CODE TO TURN LEFT
 
 		if self.turn_right:
-			self.rect.centerx += 1 #REPLACE BY CODE TO TURN RIGHT
+			print 'Right'
+			self.rect.x += 1 #REPLACE BY CODE TO TURN RIGHT
 
-		self.move_forward = False
-		self.turn_left = False
-		self.turn_right = False
+		# Undo the changes if there was a collision
+		if self.rect.collidelist(self.parent.walls) != -1:
+			print "Collision!"
+			self.rect.center = original_position
 
 	# Use this for moving the player
-	def notify(self, command):
-		if command == 'turnLeft':
-			self.turn_left = True
-			print "turn left command received"
-		elif command == 'turnRight':
-			self.turn_right = True
-			print "turn right command received"
-		elif command == 'moveForward':
-			self.move_forward = True
-			print "go forward command received"
+	def notify(self, command, state=True):
+		if command == 'move_forward':
+			self.move_forward = state
+			print "go forward = " + str(state)
+		elif command == 'turn_left':
+			self.turn_left = state
+			print "turn left = " + str(state)
+		elif command == 'turn_right':
+			self.turn_right = state
+			print "turn right = " + str(state)
 		else:
 			print "Invalid command (this shouldn't happen!)"
 
@@ -217,30 +224,35 @@ class Simulation(object):
 	def keytoggle(self, key, state):
 		if key == K_q:
 			self.running = False
+		if key == K_UP:
+			self.game_map.player.notify("move_forward", state)
+		if key == K_LEFT:
+			self.game_map.player.notify("turn_left", state)
+		if key == K_RIGHT:
+			self.game_map.player.notify("turn_right", state)
 
-	def update_input(self, events):
+	def check_input(self, events):
 		for event in events:
 			if event.type == QUIT:
 				self.running = False
 			elif event.type == KEYDOWN:
-				self.running = False
-				# self.keytoggle(event.key, True)
+				self.keytoggle(event.key, True)
 			elif event.type == KEYUP:
 				self.keytoggle(event.key, False)
 
-	def update_logic(self):
+	def update(self):
 		self.game_map.update()
 
-	def update_screen(self, window):
+	def draw(self, window):
 		self.game_map.draw(window)
 
 	def mainloop(self, window):
 		while self.running:
 			time = self.clock.tick(self.framerate)
 
-			self.update_input(pygame.event.get())
-			self.update_logic()
-			self.update_screen(window)
+			self.check_input(pygame.event.get())
+			self.update()
+			self.draw(window)
 
 			pygame.display.flip()
 			pygame.event.pump()
