@@ -275,6 +275,29 @@ class Map(GameObject):
 		surface.fill(Color.white)
 		super(Map, self).draw(surface)
 
+class Button(GameObject):
+
+	def __init__(self, parent, position, dimension):
+		super(Button, self).__init__(parent, position, dimension)
+
+	def mouse_click(self, pos):
+		print pos
+
+class InfoBox(GameObject):
+
+	def __init__(self, parent, position, dimension, game_map):
+		super(InfoBox, self).__init__(parent, position, dimension)
+		self.game_map = game_map
+
+	# Gather all the data to draw on the next
+	# draw() call
+	def update(self):
+		pass
+
+	# Draw information about the 'player' and provide
+	# some buttons to modify the game
+	def draw(self, surface):
+		pass
 
 class Simulation(GameObject):
 
@@ -283,6 +306,9 @@ class Simulation(GameObject):
 
 		# Set resolution for top-level objects
 		self.resolution = resolution
+		# Game resolution width and height are multiples of 64 for easy image scaling
+		self.game_resolution = (640, 512)
+		self.infobox_resolution = (200, 512)
 
 		# Global settings
 		self.running = True
@@ -290,6 +316,11 @@ class Simulation(GameObject):
 		self.framerate = 60
 		self.clock = pygame.time.Clock()
 
+		# Create the game_map and infobox objects
+		game_pos = (0, 0)
+		infobox_pos = (self.game_resolution[0], 0)
+		self.game_map = Map(self, game_pos, self.game_resolution)
+		self.infobox = InfoBox(self, infobox_pos, self.infobox_resolution, self.game_map)
 
 		# Start sending/receiving with the player (ANN)
 		connection_thread = threading.Thread(target=connection, args=[self.game_map.player])
@@ -328,9 +359,22 @@ class Simulation(GameObject):
 
 	def update(self):
 		self.game_map.update()
+		self.infobox.update()
 
 	def draw(self, window):
-		self.game_map.draw(window)
+		# Get the surface representing the game's drawing area
+		game_surface_rect = Rect((0, 0), self.game_resolution)
+		game_surface = window.subsurface(game_surface_rect)
+
+		# Get the rest
+		infobox_surface_rect = Rect((game_surface_rect.right, 0), self.infobox_resolution)
+		infobox_surface = window.subsurface(infobox_surface_rect)
+
+		# Draw the game
+		self.game_map.draw(game_surface)
+
+		# Draw the infobox
+		self.infobox.draw(infobox_surface)
 
 	def mainloop(self, window):
 		while self.running:
