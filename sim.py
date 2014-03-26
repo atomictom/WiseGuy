@@ -184,6 +184,7 @@ class Player(GameObject):
 	def draw(self, surface):
 		# When this is changed to use an image instead of a circle, rotate the image
 		pygame.draw.circle(surface, Color.blue, self.rect.center, self.radius)
+		# pygame.draw.rect(surface, Color.yellow, self.rect)
 
 	def update(self):
 
@@ -191,15 +192,12 @@ class Player(GameObject):
 			self.go_forward()
 
 		if self.turn_left:
-			print 'Left'
 			self.theta -= self.rotation_speed % (2 * math.pi)
 
 		if self.turn_right:
-			print 'Right'
 			self.theta += self.rotation_speed % (2 * math.pi)
 
 	def go_forward(self):
-		print 'Forward'
 		# Save the original position in case we collide and need to revert
 		original_position = (self.x, self.y)
 
@@ -209,13 +207,15 @@ class Player(GameObject):
 		self.y += self.speed * math.sin(self.theta)
 
 		# If there is a collision, move back to the original position (disallow it)
-		if self.rect.collidelist(self.parent.walls) != -1:
+		new_pos = self.rect.copy()
+		new_pos.x = self.x
+		new_pos.y = self.y
+		if new_pos.collidelist(self.parent.walls) != -1:
 			print "Collision!"
 			self.x, self.y = original_position
-
-		# Apply the position updates to the Player's rect
-		self.rect.x = self.x
-		self.rect.y = self.y
+		else:
+			# Apply the position updates to the Player's rect
+			self.rect = new_pos
 
 	def get_info(self):
 		""" Return information to be sent to the ANN """
@@ -225,13 +225,10 @@ class Player(GameObject):
 	def notify(self, command, state=True):
 		if command == 'move_forward':
 			self.move_forward = state
-			print "go forward = " + str(state)
 		elif command == 'turn_left':
 			self.turn_left = state
-			print "turn left = " + str(state)
 		elif command == 'turn_right':
 			self.turn_right = state
-			print "turn right = " + str(state)
 		else:
 			print "Invalid command (this shouldn't happen!)"
 
