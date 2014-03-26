@@ -74,6 +74,8 @@ class GameObject(object):
 			parent.register(self)
 
 		self._rect = pygame.Rect(position, dimension)
+		self.entered = False
+		self.pressed = False
 
 	def register(self, obj):
 		self.objects.append(obj)
@@ -89,6 +91,49 @@ class GameObject(object):
 	def notify(self, *args, **kwargs):
 		print args
 		print kwargs
+
+	# Matt: You should override this
+	def mouse_click(self, pos):
+		""" A hook to override to provide behavior to clicks """
+		print "Clicked at: " + str(pos)
+
+	def mouse_down(self, pos, button):
+		""" Called on an element if a mouse button has been pressed over it """
+		self.pressed = self.rect.collidepoint(pos)
+
+		# Bubble the click updown to any descendants who may have also been clicked
+		for obj in self.objects:
+			obj.mouse_down(pos, button)
+
+	def mouse_up(self, pos, button):
+		""" Called on an element if it has been clicked """
+
+		if self.rect.collidepoint(pos) and self.pressed:
+			self.mouse_click(pos)
+
+		self.pressed = False
+		# Bubble the click down to any descendants who may have also been clicked
+		for obj in self.objects:
+			obj.mouse_up(pos, button)
+
+	def mouse_enter(self):
+		""" Called when the mouse enters an element's rect """
+		self.entered = True
+
+	def mouse_exit(self):
+		""" Called when the mouse exits an element's rect """
+		self.entered = False
+
+	def mouse_move(self, pos, rel, buttons):
+		""" 	Called on an element whenever the mouse moves (even if not over it) """
+		# Bubble the click down to any descendants who may have also been clicked
+		if self.rect.collidepoint(pos) and not self.entered:
+			self.mouse_enter()
+		if self.entered and not self.rect.collidepoint(pos):
+			self.mouse_exit()
+
+		for obj in self.objects:
+			obj.mouse_move(pos, rel, buttons)
 
 	@property
 	def rect(self):
@@ -274,6 +319,12 @@ class Simulation(GameObject):
 				self.keytoggle(event.key, True)
 			elif event.type == KEYUP:
 				self.keytoggle(event.key, False)
+			elif event.type == MOUSEMOTION:
+				self.mouse_move(event.pos, event.rel, event.buttons)
+			elif event.type == MOUSEBUTTONDOWN:
+				self.mouse_down(event.pos, event.button)
+			elif event.type == MOUSEBUTTONUP:
+				self.mouse_up(event.pos, event.button)
 
 	def update(self):
 		self.game_map.update()
