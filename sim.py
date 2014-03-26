@@ -65,7 +65,9 @@ class Color(pygame.Color):
 
 class GameObject(object):
 
-	def __init__(self, parent, position=(0, 0), dimension=(0, 0)):
+	def __init__(self, parent, position=(0, 0), dimension=(0, 0), *args, **kwargs):
+		super(GameObject, self).__init__(*args, **kwargs)
+
 		self.parent = parent
 		self.objects = []
 		if parent:
@@ -137,13 +139,9 @@ class Player(GameObject):
 	def draw(self, surface):
 		# When this is changed to use an image instead of a circle, rotate the image
 		pygame.draw.circle(surface, Color.blue, self.rect.center, self.radius)
-		pygame.draw.rect(surface, Color.yellow, self.rect)
 
 	def update(self):
 
-		# Might need to track x and y seperately from self.rect since it might
-		# truncate values to integers, in which case two movements of 1.5 will
-		# only go 2 units, not 3.
 		if self.move_forward:
 			self.go_forward()
 
@@ -174,8 +172,8 @@ class Player(GameObject):
 		self.rect.x = self.x
 		self.rect.y = self.y
 
-	#Function for computing the output that will go to the ANN
 	def get_info(self):
+		""" Return information to be sent to the ANN """
 		pass
 
 	# Use this for moving the player
@@ -194,12 +192,6 @@ class Player(GameObject):
 
 
 class Wall(GameObject):
-	""" Wall represents an impassable object that the player or enemies must navigate around
-
-		Parameters:
-			position -> the upper left corner of the wall's rectangle as a tuple
-			dimension -> the width and height of the rectangle as a tuple
-	"""
 
 	def __init__(self, parent, position, dimension):
 		super(Wall, self).__init__(parent, position, dimension)
@@ -210,11 +202,8 @@ class Wall(GameObject):
 
 class Map(GameObject):
 
-	def __init__(self, width, height):
-		super(Map, self).__init__(None, dimension=(width, height))
-
-		self.width = width
-		self.height = height
+	def __init__(self, parent, position, dimension):
+		super(Map, self).__init__(parent, position, dimension)
 
 		# Create the walls, enemies, and player
 		self.walls = self.create_walls()
@@ -241,26 +230,26 @@ class Map(GameObject):
 		surface.fill(Color.white)
 		super(Map, self).draw(surface)
 
-class Simulation(object):
 
-	def __init__(self):
+class Simulation(GameObject):
+
+	def __init__(self, resolution=(840, 512)):
+		super(Simulation, self).__init__(None, dimension=resolution)
+
+		# Set resolution for top-level objects
+		self.resolution = resolution
+
+		# Global settings
 		self.running = True
-		# 64 * 13, 64 * 10, so the images can be powers of 2 and easy to scale
-		self.resolution = (832, 640)
 		self.title = 'Simulation'
 		self.framerate = 60
 		self.clock = pygame.time.Clock()
 
-		self.game_map = Map(*self.resolution)
 
-		# create the server and the client for communication with ANN.
-		# server for receiving commands from the ANN
-		context = zmq.Context()
-		self.socket = context.socket(zmq.REQ)
-		self.socket.bind('tcp://127.0.0.1:1234')
-		self.socket.connect('tcp://127.0.0.1:1235')
-
-		threading.Thread(target=connection, args=[self.socket, self.game_map.player]).start()
+		# Start sending/receiving with the player (ANN)
+		connection_thread = threading.Thread(target=connection, args=[self.game_map.player])
+		connection_thread.daemon = True
+		connection_thread.start()
 
 	def quit(self):
 		self.running = false
@@ -303,8 +292,6 @@ class Simulation(object):
 			pygame.display.flip()
 			pygame.event.pump()
 
-		self.socket.close()
-
 def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
 	font = pygame.font.Font(None, size)
 	msgsurface = font.render(msg, False, color)
@@ -313,36 +300,41 @@ def drawText(surface, msg, location = (0,0), size = 20, color = Color.white):
 	surface.blit(msgsurface, rect)
 	return rect
 
-def connection(socket, player):
-	while True:
+def connection(player):
+	# create the server and the client for communication with ANN.
+	# server for receiving commands from the ANN
+	context = zmq.Context()
+	socket = context.socket(zmq.REQ)
+	socket.bind('tcp://127.0.0.1:1234')
+	socket.connect('tcp://127.0.0.1:1235')
 
-		#send output to ANN.
+	while True:
+		# send output to ANN.
 		output_list = player.get_info()
 		output_string = pickle.dumps(output_list)
 		socket.send(output_string)
 
-		#receive reply from ANN
+		# receive reply from ANN
 		msg = socket.recv()
 		list_message = pickle.loads(msg)
 		if list_message:
 
-			#position 1 will be turn right
+			# position 1 will be turn right
 			turn_right = list_message[0]
 			if turn_right:
 				player.notify('turn_right')
 
-			#position 2 will be turn left
+			# position 2 will be turn left
 			turn_left = list_message[1]
 			if turn_left:
 				player.notify('turn_left')
 
-			#position 3 will be move forward
+			# position 3 will be move forward
 			move_forward = list_message[2]
 			if move_forward:
 				player.notify('move_forward')
 		else:
 			print "Invalid commands"
-
 
 def main():
 	sim = Simulation()
