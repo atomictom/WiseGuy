@@ -38,7 +38,7 @@ from pygame.locals import *
 
 # For Thomas:
 # 	* [X] Consider alternative to add_objects() and super method draw/update -- I added a 'parent' parameter and a 'register' method
-# 	* [ ] Collision detection on walls + enemies + player -- partially done
+# 	* [X] Collision detection on walls + enemies + player
 # 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
 
 # Walls and enemy locations are hardcoded here for predictability
@@ -206,12 +206,13 @@ class Player(GameObject):
 		self.x += self.speed * math.cos(self.theta)
 		self.y += self.speed * math.sin(self.theta)
 
-		# If there is a collision, move back to the original position (disallow it)
+		# new_pos is where the player will move if we don't collide with a wall
 		new_pos = self.rect.copy()
 		new_pos.x = self.x
 		new_pos.y = self.y
 		if new_pos.collidelist(self.parent.walls) != -1:
 			print "Collision!"
+			# If there is a collision, move back to the original position (disallow it)
 			self.x, self.y = original_position
 		else:
 			# Apply the position updates to the Player's rect
