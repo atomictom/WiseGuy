@@ -31,6 +31,7 @@ from pygame.locals import *
 # 	* [X] Implement the update() method of the Player class to act on command received from notify()
 # 	* [X] Enemies need to move (write the 'update' function on the Enemy class)
 # 	* [ ] Add controls to modify the environment/sim while the ANN is running (add/rm walls? add/rm enemies?)
+# 	* [ ] Make it so that when the player collides with a wall, it just slides along it, rather than getting stuck
 # 	* [X] Integrate socket code
 
 # For Diego:
@@ -39,7 +40,7 @@ from pygame.locals import *
 # For Thomas:
 # 	* [X] Consider alternative to add_objects() and super method draw/update -- I added a 'parent' parameter and a 'register' method
 # 	* [X] Collision detection on walls + enemies + player
-# 	* [ ] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player
+# 	* [/] Add feelers (wall/obstacle sensors) and radar (enemy sensor) to Player -- radar is done
 
 # Walls and enemy locations are hardcoded here for predictability
 WALLS = [
@@ -152,9 +153,11 @@ class Enemy(GameObject):
 		self.radius = radius
 		self.game_map = parent
 		self.speed = Enemy.speed
+		self.detected = False
 
 	def draw(self, surface):
-		pygame.draw.circle(surface, Color.red, self.rect.topleft, self.radius)
+		color = Color.red if not self.detected else Color.green
+		pygame.draw.circle(surface, color, self.rect.topleft, self.radius)
 
 	def update(self):
 		screen_width = self.parent.rect.width
@@ -164,6 +167,48 @@ class StaticEnemy(Enemy):
 
 	def update(self):
 		pass
+
+class Vector(object):
+
+	def __init__(self, x, y):
+		self.x = x
+		self.y = y
+
+	def __add__(self, other):
+		return Vector(self.x + other.x, self.y + other.y)
+
+	def __sub__(self, other):
+		return Vector(self.x - other.x, self.y - other.y)
+
+	def to_point(self):
+		return (self.x, self.y)
+
+	@property
+	def magnitude(self):
+		return (self.x ** 2 + self.y ** 2) ** .5
+
+	def normalize(self):
+		""" Normalize this vector in place """
+		magnitude = self.magnitude
+		self.x /= magnitude
+		self.y /= magnitude
+
+	def normalized(self):
+		""" Return a normalized version of this vector """
+		magnitude = self.magnitude
+		x = self.x / magnitude
+		y = self.y / magnitude
+
+		return Vector(x, y)
+
+class Feeler(object):
+
+	def __init__(self, vector):
+		self.vector = vector
+
+	def first_intersect(self, walls):
+		pass
+
 
 class Player(GameObject):
 
@@ -181,12 +226,71 @@ class Player(GameObject):
 		# Start facing to the top of the screen. 0 degrees points to the right
 		self.theta = math.pi
 
+		self.radar_radius = 75
+
+	def feelers(self, count=3, length=100, fov=math.pi):
+		""" Return a list of Feeler objects
+
+			count => the number of feelers to create
+			length => the length of the feeler (how far it can detect objects)
+			fov => field of view, or the range in radians that the feelers fan across
+
+			returns a list of Feelers
+		"""
+		feelers = []
+
+		start_angle = (self.theta - (fov / 2)) % (math.pi * 2)
+		spread = (fov / count)
+		for i in range(count):
+			angle = start_angle + (spread * i) % (math.pi * 2)
+			x = self.rect.x + (math.cos(angle) * length)
+			y = self.rect.y + (math.sin(angle) * length)
+			vector = Vector(x, y)
+			feeler = Feeler(vector)
+			feelers.append(feeler)
+
+		return feelers
+			
+
+	def radar(self, radius):
+		radar_list = []
+		for enemy in self.parent.enemies:
+			player_pos = Vector(*self.rect.center)
+			enemy_pos = Vector(*enemy.rect.center)
+			vector = enemy_pos - player_pos
+
+			max_distance = min(radius, vector.magnitude)
+			direction = vector.normalized()
+			closest_point = player_pos + Vector(direction.x * max_distance, direction.y * max_distance)
+
+			if enemy.rect.collidepoint(closest_point.to_point()):
+				radar_list.append(enemy)
+
+		return radar_list
+
 	def draw(self, surface):
+		# Draw the radar
+		radar_color = pygame.Color(50, 50, 50)
+		radar_surface = pygame.Surface(surface.get_size())
+		radar_surface.fill((255, 255, 255))
+		pygame.draw.circle(radar_surface, radar_color, self.rect.center, self.radar_radius)
+		radar_surface.set_alpha(50)
+		surface.blit(radar_surface, (0, 0))
+
+		# Draw the feelers
+		pass
+
+		# Draw the player
 		# When this is changed to use an image instead of a circle, rotate the image
 		pygame.draw.circle(surface, Color.blue, self.rect.center, self.radius)
 		# pygame.draw.rect(surface, Color.yellow, self.rect)
 
 	def update(self):
+		for enemy in self.parent.enemies:
+			enemy.detected = False
+		detected_enemies = self.radar(self.radar_radius)
+		for enemy in detected_enemies:
+			enemy.detected = True
 
 		if self.move_forward:
 			self.go_forward()
