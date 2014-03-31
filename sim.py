@@ -394,12 +394,28 @@ class InfoBox(GameObject):
 	# Gather all the data to draw on the next
 	# draw() call
 	def update(self):
-		pass
+		self.draw(surface)
 
 	# Draw information about the 'player' and provide
 	# some buttons to modify the game
 	def draw(self, surface):
+		surface.fill(Color.black)
+		super(InfoBox, self).draw(surface)
+		
+		#Print player position
+		msg = "Player pos: (" + parent.game_map.player.x + "," + parent.game_map.player.y + ")"
+		drawText(surface, msg)
+
+		#Print enemies on radar
+		msg = "Enemies on Radar: " + parent.game_map.player.radar
+		drawText(surface, msg)
+
+		#Print feeler information
 		pass
+
+		#Create buttons to change environment
+		pass
+
 
 class Simulation(GameObject):
 
