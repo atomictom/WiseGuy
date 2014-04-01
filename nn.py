@@ -2,7 +2,6 @@
 # -- nn.py
 #
 # @package NeuralNetwork
-# @author Jeff Hubbard
 
 import Queue
 import random
@@ -10,6 +9,7 @@ import math
 import pickle
 import zmq
 import time
+import threading
 
 NUM_INPUTS = 3
 NUM_HIDDEN = 3
@@ -40,7 +40,10 @@ class HiddenNode(Node):
 
     def activate(self):
         sum = 0
-        
+
+        for value in self.values:
+            sum += value
+
         for value in self.values:
             sum += value
 
@@ -56,13 +59,13 @@ class OutputNode(Node):
 
         for value in self.values:
             sum += value
-        
+
         fin = self.sigmoid(sum)
         if fin < 0.5:
             return 0
         else:
             return 1
- 
+
 def initEdgeWeights(nodes):
     random.seed()
 
@@ -79,20 +82,20 @@ def derivSig(num):
 def run(inputs, hidden, outputs):
     for input in inputs:
         val = input.input.get()
-        
+
         for i in range(NUM_HIDDEN):
             hidden[i].values.append(input.connected_edges[i] * val)
             hidden[i].last_input = val
 
     for node in hidden:
         node.final = node.activate()
-        
+
         for i in range(NUM_OUTPUTS):
             outputs[i].values.append(node.connected_edges[i] * node.final)
 
     for out in outputs:
         OUTPUTS.append(out.checkThreshold())
-    
+
 def backPropagate(targets, inputs, hidden):
     out_deltas = []
     for i in range(NUM_OUTPUTS):
@@ -115,7 +118,7 @@ def backPropagate(targets, inputs, hidden):
         for j in range(NUM_HIDDEN):
             delta = hidden_deltas[j] * hidden[i].last_input
             inputs[i].connected_edges[j] += .5 * delta
-            
+
     error = 0
     for i in range(len(targets)):
         error += .5 * (targets[i] - OUTPUTS[i])**2
@@ -132,9 +135,13 @@ def main():
     initEdgeWeights(input_nodes)
     initEdgeWeights(hidden_nodes)
 
+    # Start sending/receiving with the player (ANN)
+    # create the server and the client for communication with Simulation.
+    # server for receiving input from the simulation.
     context = zmq.Context()
-    socket = context.socket(zmq.PAIR)
-    socket.bind("tcp://*:4520")
+    socket = context.socket(zmq.REP)
+    socket.bind('tcp://127.0.0.1:1235')
+    socket.connect('tcp://127.0.0.1:1234')
 
     while True:
         global OUTPUTS
@@ -152,6 +159,6 @@ def main():
         #print OUTPUTS
         socket.send(pickle.dumps(OUTPUTS))
         OUTPUTS = []
-        
+
 if __name__ == "__main__":
     main()
