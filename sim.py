@@ -24,7 +24,6 @@ from pygame.locals import *
 # 	* [X] Manually place walls and hazards
 # Low Priority:
 # 	* [ ] Rewrite the draw methods to use actual images (for enemies, player, hazards, and goal)
-# 	* [ ] Consider using Sprite class as a base for the GameObject class
 
 # For Matt and Diego:
 # 	* [X] Implement the notify() method of the Player class to receive commands (from sockets), commands can be "turn left", "turn right", "forward", "stop" for now
@@ -187,6 +186,18 @@ class Vector(object):
 	def magnitude(self):
 		return (self.x ** 2 + self.y ** 2) ** .5
 
+	def rotate(self, angle):
+		x = self.x * math.cos(angle) - self.y * math.sin(angle)
+		y = self.x * math.sin(angle) + self.y * math.cos(angle)
+
+		self.x, self.y = x, y
+
+	def rotated(self, angle):
+		x = self.x * math.cos(angle) - self.y * math.sin(angle)
+		y = self.x * math.sin(angle) + self.y * math.cos(angle)
+
+		return Vector(x, y)
+
 	def normalize(self):
 		""" Normalize this vector in place """
 		magnitude = self.magnitude
@@ -201,14 +212,127 @@ class Vector(object):
 
 		return Vector(x, y)
 
-class Feeler(object):
+class Line(object):
 
-	def __init__(self, vector):
-		self.vector = vector
+	def __init__(self, m=float("inf"), b=None, x=None):
+		self.m = m
+		self.b = b
+		self._x = x
 
-	def first_intersect(self, walls):
-		pass
+	@property
+	def x(self):
+		if _x is not None:
+			return _x
+		else:
+			return -(self.b / self.m)
 
+	@classmethod
+	def vertical(cls, x):
+		return cls(x=x)
+
+	@classmethod
+	def from_points(cls, p1, p2):
+		if p1[0] == p2[0]:
+			return cls.vertical(p1[0])
+
+		m = (p1[1] - p2[1]) / (p1[0] - p2[0])
+		b = p1[1] - (m * p1[0])
+		return cls(m=m, b=b)
+
+	@classmethod
+	def from_vectors(cls, v1, v2):
+		return cls.from_points((v1.x, v1.y), (v2.x, v2.y))
+
+	def is_vertical(self):
+		return self.m == float("inf")
+
+	def parallels(self, line):
+		return self.m == line.m
+
+	def same_as(self, line):
+		if self.parallels(line):
+			if self.is_vertical():
+				return self.x == line.y
+			else:
+				return self.b == line.b
+		else:
+			return False
+
+	def intersects(self, line):
+		""" 	If there is only one point of intersection, return that point
+			as a tuple.
+
+			If there are no points of intersection (parallel but not the same),
+			return False
+
+			If they are the same line, return True
+		"""
+		if self.parallels(line):
+			return self.same_as(line)
+		else:
+			if self.is_vertical():
+				return (self.x, (line.m * self.x) + line.b)
+			elif line.is_vertical():
+				return (line.x, (self.m * line.x) + self.b)
+			else:
+				x = (line.b - self.b) / (self.m - line.m)
+				y = (self.m * x) + self.b
+				return (x, y)
+
+class Feeler(Vector):
+
+	def __init__(self, x, y):
+		super(Feeler, self).__init__(x, y)
+
+	def distance_to_wall(self, wall, player_vector):
+		r1 = wall.rect.topleft
+		r2 = wall.rect.topright
+		r3 = wall.rect.bottomright
+		r4 = wall.rect.bottomleft
+
+		l1 = (r1, r2)
+		l2 = (r2, r3)
+		l3 = (r3, r4)
+		l4 = (r4, r1)
+
+		feeler_vector = self.rotated(player.theta)
+		feeler_line = Line.from_vectors(player_vector, feeler_vector)
+
+		minimum = self.magnitude
+		for points in [l1, l2, l3, l4]:
+			p1, p2 = points
+			line = Line.from_points(p1, p2)
+			intersection = feeler_line.intersects(line)
+			if intersection:
+				if intersection is True:
+					# Minimum distance from the player to the wall (that is, the magnitude).
+					# Because the player can only be on one side or the other of the wall,
+					# not in it, we only need to see which point it's closest to.
+					return min(map(abs, [player_vector.y - p1, player_vector.y - p2]))
+				else:
+					# Record the minimum intersection distance.
+					distance_vector = player_vector - Vector(*intersection)
+					# TODO: test if the intersection is within the wall
+					if False:
+						pass
+					minimum = min(minimum, distance_vector.magnitude)
+
+		return minimum
+
+
+	def closest_intersect(self, player, walls):
+		player_vector = Vector(player.centerx, player.y)
+
+		minimum = self.magnitude
+		for wall in walls:
+			minimum = min(minimum, self.distance_to_wall(wall, player_vector))
+
+		return minimum
+
+def bound(value, maximum, minimum):
+	if maximum < minimum:
+		maximum, minimum = minimum, maximum
+	return min(maximum, max(minimum, value))
 
 class Player(GameObject):
 
@@ -229,7 +353,7 @@ class Player(GameObject):
 		self.radar_radius = 75
 
 	def feelers(self, count=3, length=100, fov=math.pi):
-		""" Return a list of Feeler objects
+		"""  Return a list of Feeler objects
 
 			count => the number of feelers to create
 			length => the length of the feeler (how far it can detect objects)
@@ -243,14 +367,13 @@ class Player(GameObject):
 		spread = (fov / count)
 		for i in range(count):
 			angle = start_angle + (spread * i) % (math.pi * 2)
-			x = self.rect.x + (math.cos(angle) * length)
-			y = self.rect.y + (math.sin(angle) * length)
-			vector = Vector(x, y)
-			feeler = Feeler(vector)
+			x = (math.cos(angle) * length)
+			y = (math.sin(angle) * length)
+			feeler = Feeler(x, y)
 			feelers.append(feeler)
 
 		return feelers
-			
+
 
 	def radar(self, radius):
 		radar_list = []
@@ -269,7 +392,7 @@ class Player(GameObject):
 		return radar_list
 
 	def draw(self, surface):
-		# Draw the radar
+		# ----- Draw the radar -----
 		radar_color = pygame.Color(50, 50, 50)
 		radar_surface = pygame.Surface(surface.get_size())
 		radar_surface.fill((255, 255, 255))
@@ -277,20 +400,25 @@ class Player(GameObject):
 		radar_surface.set_alpha(50)
 		surface.blit(radar_surface, (0, 0))
 
-		# Draw the feelers
+		# ----- Draw the feelers -----
+		for feeler in self.feelers
 		pass
 
-		# Draw the player
+		# ----- Draw the player -----
 		# When this is changed to use an image instead of a circle, rotate the image
 		pygame.draw.circle(surface, Color.blue, self.rect.center, self.radius)
 		# pygame.draw.rect(surface, Color.yellow, self.rect)
 
 	def update(self):
+		# Update the radar
 		for enemy in self.parent.enemies:
 			enemy.detected = False
 		detected_enemies = self.radar(self.radar_radius)
 		for enemy in detected_enemies:
 			enemy.detected = True
+
+		# Update the feelers
+
 
 		if self.move_forward:
 			self.go_forward()
