@@ -312,10 +312,10 @@ class Feeler(Vector):
 				else:
 					# Record the minimum intersection distance.
 					distance_vector = player_vector - Vector(*intersection)
-					# TODO: test if the intersection is within the wall
-					if False:
-						pass
-					minimum = min(minimum, distance_vector.magnitude)
+					# Test if the intersection lies between the two points of the
+					# rectangle making the line segment
+					if is_bound(intersection, p1, p2):
+						minimum = min(minimum, distance_vector.magnitude)
 
 		return minimum
 
@@ -333,6 +333,11 @@ def bound(value, maximum, minimum):
 	if maximum < minimum:
 		maximum, minimum = minimum, maximum
 	return min(maximum, max(minimum, value))
+
+def is_bound(value, maximum, minimum):
+	if maximum < minimum:
+		maximum, minimum = minimum, maximum
+	return minimum <= value <= maximum
 
 class Player(GameObject):
 
@@ -401,8 +406,9 @@ class Player(GameObject):
 		surface.blit(radar_surface, (0, 0))
 
 		# ----- Draw the feelers -----
-		for feeler in self.feelers
-		pass
+		# TODO
+		for feeler in self.feelers:
+			pass
 
 		# ----- Draw the player -----
 		# When this is changed to use an image instead of a circle, rotate the image
@@ -418,7 +424,7 @@ class Player(GameObject):
 			enemy.detected = True
 
 		# Update the feelers
-
+		# TODO
 
 		if self.move_forward:
 			self.go_forward()
@@ -453,6 +459,14 @@ class Player(GameObject):
 	def get_info(self):
 		""" Return information to be sent to the ANN """
 		pass
+
+	# Pseudo code for the cost function
+	# TODO: fill this in with real functions/code
+	def cost_function(self):
+		cost_reducer = 1
+		if self.can_see(self.parent.goal):
+			cost_reducer = 100
+		return distance(self, self.parent.goal) / cost_reducer
 
 	# Use this for moving the player
 	def notify(self, command, state=True):
