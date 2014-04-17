@@ -6,8 +6,6 @@
 import Queue
 import random
 import math
-import pickle
-import zmq
 import time
 import threading
 
