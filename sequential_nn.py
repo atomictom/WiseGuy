@@ -3,155 +3,140 @@
 #
 # @package NeuralNetwork
 
-import Queue
 import random
 import math
-import time
 import threading
+import operator
 
-NUM_THREADS = 1
-NUM_TESTS = 100
-NUM_INPUTS = 50
-NUM_HIDDEN = 30
-NUM_OUTPUTS = 50
-USE_BACKPROPOGATE = True
-OUTPUTS = []
+NUM_TESTS = 300
+NUM_INPUTS = 1000
+NUM_HIDDEN = 1200
+NUM_OUTPUTS = 1
+LAYERS = [NUM_INPUTS, NUM_HIDDEN, NUM_OUTPUTS]
+USE_BACKPROPAGATE = False
+USE_PROFILE = True
 
-# test_input = [ .0, .3, .6, .2, .8 ]
+class Layer(object):
 
-class Node:
+    def activate(self, inputs):
+        return inputs
 
-    def __init__(self):
-        self.connected_edges = []
-
-    def sigmoid(self, num):
+    @staticmethod
+    def sigmoid(num):
         return math.tanh(num)
 
-class InputNode(Node):
+    @staticmethod
+    def derivSig(num):
+        return 1 - math.tanh(num) ** 2
 
-    def __init__(self):
-        self.input = Queue.Queue()
+class OutputLayer(Layer):
 
-class HiddenNode(Node):
+    def activate(self, inputs):
+        return [ int(round(value / 2 + .5)) for value in inputs ]
 
-    def __init__(self):
-        self.values = []
-        self.final = 0
-        self.last_input = None
+class InnerLayer(Layer):
 
-    def activate(self):
-        sum = 0
+    def __init__(self, num_nodes, num_edges):
+        # A list of lists
+        # The rows correspond to the number of edges per node (number of nodes
+        # in the next layer).
+        # The columns correspond to the number of nodes in the current layer
+        self.weight_matrix = []
 
-        for value in self.values:
-            sum += value
+        # Initialize the weights for each node
+        random.seed()
+        for row in range(num_edges):
+            self.weight_matrix.append([ random.uniform(-1.0, 1.0) for edge in range(num_nodes) ])
 
-        for value in self.values:
-            sum += value
+    # TODO Parallelize this!
+    def activate(self, inputs):
+        """ Activate each neuron in the layer one at a time """
+        outputs = []
+        for weights in self.weight_matrix:
+            # This computes the dot product of two "vectors" (lists here)
+            dot_product = sum(map(operator.mul, inputs, weights))
+            output = self.sigmoid(dot_product)
+            outputs.append(output)
 
-        return self.sigmoid(sum)
+        return outputs
 
-class OutputNode(Node):
+class NeuralNetwork(object):
 
-    def __init__(self):
-        self.values = []
+    def __init__(self, nodes_per_layer):
+        self.layers = []
+        for num_nodes, num_edges in nodes_per_layer[:-1], nodes_per_layer[1:]:
+            layer = InnerLayer(num_nodes, num_edges)
+            self.layers.append(layer)
 
-    def checkThreshold(self):
-        sum = 0
+        output_layer = OutputLayer()
+        self.layers.append(output_layer)
 
-        for value in self.values:
-            sum += value
+    def feedForward(self, inputs):
+        # Process the inputs layer by layer until we have the final output
+        for layer in self.layers:
+            outputs = layer.activate(inputs)
+            # Inputs to the next layer are outputs from the previous one
+            inputs = outputs
 
-        fin = self.sigmoid(sum)
-        if fin < 0.5:
-            return 0
-        else:
-            return 1
+        # 'outputs' is the output from the last layer...which is the output layer
+        return outputs
 
-def initEdgeWeights(nodes, num_edges):
-    random.seed()
-
-    for node in nodes:
-        node.connected_edges = [ random.uniform(-1.0, 1.0) for x in range(num_edges) ]
-
-def recvInputVector(input, input_nodes):
-    for i in range(NUM_INPUTS):
-        input_nodes[i].input.put(input[i])
-
-def derivSig(num):
-    return 1 - num**2
-
-def run(inputs, hidden, outputs):
-    for input in inputs:
-        val = input.input.get()
-
-        for i in range(NUM_HIDDEN):
-            hidden[i].values.append(input.connected_edges[i] * val)
-            hidden[i].last_input = val
-
-    for node in hidden:
-        node.final = node.activate()
-
-        for i in range(NUM_OUTPUTS):
-            outputs[i].values.append(node.connected_edges[i] * node.final)
-
-    for out in outputs:
-        OUTPUTS.append(out.checkThreshold())
-
-def backPropagate(targets, inputs, hidden):
-    out_deltas = []
-    for i in range(NUM_OUTPUTS):
-        error = targets[i] - OUTPUTS[i]
-        out_deltas.append(error * derivSig(OUTPUTS[i]))
-
-    for i in range(NUM_HIDDEN):
-        for j in range(NUM_OUTPUTS):
-            delta = out_deltas[j] * hidden[i].final
-            hidden[i].connected_edges[j] += .5 * delta
-
-    hidden_deltas = []
-    for i in range(NUM_HIDDEN):
-        error = 0
-        for j in range(NUM_OUTPUTS):
-            error += out_deltas[j] * hidden[i].connected_edges[j]
-        hidden_deltas.append(error * derivSig(hidden[i].final))
-
-    for i in range(NUM_INPUTS):
-        for j in range(NUM_HIDDEN):
-            delta = hidden_deltas[j] * hidden[j].last_input
-            inputs[i].connected_edges[j] += .5 * delta
-
-    error = 0
-    for i in range(len(targets)):
-        error += .5 * (targets[i] - OUTPUTS[i])**2
-
-    return error
+    def backPropagate(desired_outputs):
+        pass
 
 def main():
-    global OUTPUTS
-    # initialize all node objects
-    input_nodes = [ InputNode() for x in range(NUM_INPUTS) ]
-    hidden_nodes = [ HiddenNode() for x in range(NUM_HIDDEN) ]
-    output_nodes = [ OutputNode() for x in range(NUM_OUTPUTS) ]
-
-    # create the weights
-    initEdgeWeights(input_nodes, len(hidden_nodes))
-    initEdgeWeights(hidden_nodes, len(output_nodes))
-
-    new_inputs = [ random.random() for i in range(NUM_INPUTS) ]
+    # Test Data
+    inputs = [ random.random() for i in range(NUM_INPUTS) ]
     desired_outputs = [ random.choice([0, 1]) for i in range(NUM_OUTPUTS) ]
-    print new_inputs
-    print desired_outputs
+    # print inputs
+    # print desired_outputs
+
+    # initialize the neural network
+    nn = NeuralNetwork(LAYERS)
 
     for i in range(NUM_TESTS):
-        # initialize input nodes with random data
-        recvInputVector(new_inputs, input_nodes)
-        run(input_nodes, hidden_nodes, output_nodes)
-        if USE_BACKPROPOGATE:
-            print backPropagate(desired_outputs, input_nodes, hidden_nodes)
-        print OUTPUTS
-        OUTPUTS = []
+        # TODO: Call this in parallel?
+        # The idea is it's like a pipeline from the game
+        output = nn.feedForward(inputs)
+        if USE_BACKPROPAGATE:
+            error = nn.backPropagate(desired_outputs)
+
+        print "Test number {} -> ".format(i), output
 
 if __name__ == "__main__":
-    main()
+    if USE_PROFILE:
+        import profile
+        profile.run('main()')
+    else:
+        main()
+
+# def backPropagate(targets, inputs, hidden):
+#     out_deltas = []
+#     for i in range(NUM_OUTPUTS):
+#         error = targets[i] - OUTPUTS[i]
+#         out_deltas.append(error * derivSig(OUTPUTS[i]))
+#
+#     for i in range(NUM_HIDDEN):
+#         for j in range(NUM_OUTPUTS):
+#             delta = out_deltas[j] * hidden[i].final
+#             hidden[i].weights[j] += .5 * delta
+#
+#     hidden_deltas = []
+#     for i in range(NUM_HIDDEN):
+#         error = 0
+#         for j in range(NUM_OUTPUTS):
+#             error += out_deltas[j] * hidden[i].weights[j]
+#         hidden_deltas.append(error * derivSig(hidden[i].final))
+#
+#     for i in range(NUM_INPUTS):
+#         for j in range(NUM_HIDDEN):
+#             delta = hidden_deltas[j] * hidden[j].last_input
+#             inputs[i].weights[j] += .5 * delta
+#
+#     error = 0
+#     for i in range(len(targets)):
+#         error += .5 * (targets[i] - OUTPUTS[i])**2
+#
+#     return error
 
 # vim:ts=4:sw=4:sta:et:
