@@ -77,6 +77,10 @@ import threading
 import operator
 import java.util.concurrent
 
+# Try doing tests with 3000+ input/hidden nodes (but only like 5 tests)
+# Also try doing it with less nodes but a lot more tests
+# and remember to use the parallel "technique" toggles below
+
 NUM_THREADS = 8
 NUM_TESTS = 300
 NUM_INPUTS = 1000
@@ -89,7 +93,7 @@ USE_PROFILE = True
 # These are the two "parallel" techniques
 # Turning both off should give the same performance as sequential_nn.py
 USE_PIPELINING = True
-USE_LOW_LEVEL_TASKS = False
+USE_LOW_LEVEL_TASKS = True
 
 threadpool = java.util.concurrent.Executors.newFixedThreadPool(NUM_THREADS)
 
